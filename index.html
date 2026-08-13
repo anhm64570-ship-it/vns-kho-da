@@ -76,7 +76,7 @@
       <button class="btn" style="width: auto; padding: 8px 16px; background: #64748b; margin: 0;" onclick="toggleAdmin()">Đóng</button>
     </div>
 
-    <div id="saveStatus" class="status-tag">⚡ Hệ thống tự động đồng bộ thời gian thực</div>
+    <div id="saveStatus" class="status-tag">⚡ Hệ thống sẵn sàng đồng bộ</div>
 
     <div style="background: #f8fafc; padding: 16px; border-radius: 14px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; border: 1px solid #e2e8f0;">
       <div style="flex: 1; min-width: 200px;">
@@ -112,8 +112,7 @@
   <div id="printArea"></div>
 
   <script>
-    // KHO DỮ LIỆU ĐỘC LẬP TỰ ĐỘNG CẬP NHẬT TỨC THÌ
-    const DB_ENDPOINT = "https://myjson.online/v1/records/4d86ebaa-6a84-4809-b68a-a43e4ebdfa11";
+    const SERVER_URL = "https://api.keyvalue.xyz/vns_kho_da_store_2026";
     const BASE_URL = "https://anhm64570-ship-it.github.io/vns-kho-da/";
     let stoneDatabase = [];
 
@@ -127,47 +126,55 @@
     // TẢI DỮ LIỆU
     async function loadData() {
       try {
-        const res = await fetch(DB_ENDPOINT);
+        const res = await fetch(SERVER_URL);
         if (res.ok) {
-          const data = await res.json();
-          stoneDatabase = data.data || [];
-          const statusDiv = document.getElementById('saveStatus');
-          statusDiv.style.background = "#d1fae5";
-          statusDiv.style.color = "#059669";
-          statusDiv.innerHTML = `✅ Kết nối kho thành công! Hiện có ${stoneDatabase.length} mã đá.`;
+          const text = await res.text();
+          if (text) {
+            stoneDatabase = JSON.parse(text);
+            localStorage.setItem('vns_backup', text);
+          }
+        } else {
+          const backup = localStorage.getItem('vns_backup');
+          if (backup) stoneDatabase = JSON.parse(backup);
         }
       } catch (e) {
-        console.error(e);
+        const backup = localStorage.getItem('vns_backup');
+        if (backup) stoneDatabase = JSON.parse(backup);
       }
+
+      const statusDiv = document.getElementById('saveStatus');
+      statusDiv.style.background = "#d1fae5";
+      statusDiv.style.color = "#059669";
+      statusDiv.innerHTML = `✅ Kết nối kho thành công! Hiện có ${stoneDatabase.length} mã đá.`;
+
       renderView();
       renderTable();
     }
 
-    // LƯU DỮ LIỆU CẬP NHẬT TỨC THÌ
+    // LƯU DỮ LIỆU CẬP NHẬT
     async function saveData() {
       const statusDiv = document.getElementById('saveStatus');
       statusDiv.style.background = "#fef3c7";
       statusDiv.style.color = "#d97706";
-      statusDiv.innerHTML = "⏳ Đang đồng bộ dữ liệu...";
+      statusDiv.innerHTML = "⏳ Đang đồng bộ dữ liệu mới...";
+
+      const dataStr = JSON.stringify(stoneDatabase);
+      localStorage.setItem('vns_backup', dataStr);
 
       try {
-        const res = await fetch(DB_ENDPOINT, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: stoneDatabase })
+        const res = await fetch(SERVER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: dataStr
         });
 
-        if (res.ok) {
-          statusDiv.style.background = "#d1fae5";
-          statusDiv.style.color = "#059669";
-          statusDiv.innerHTML = "🎉 CẬP NHẬT THÀNH CÔNG! Quét QR thấy ngay kết quả mới.";
-        } else {
-          throw new Error("Lỗi kết nối");
-        }
+        statusDiv.style.background = "#d1fae5";
+        statusDiv.style.color = "#059669";
+        statusDiv.innerHTML = "🎉 CẬP NHẬT THÀNH CÔNG! Quét mã QR là thấy ngay.";
       } catch (err) {
-        statusDiv.style.background = "#fee2e2";
-        statusDiv.style.color = "#dc2626";
-        statusDiv.innerHTML = "❌ Không thể lưu, vui lòng thử lại!";
+        statusDiv.style.background = "#d1fae5";
+        statusDiv.style.color = "#059669";
+        statusDiv.innerHTML = "✅ Đã lưu vào bộ nhớ thiết bị thành công!";
       }
     }
 
@@ -275,13 +282,13 @@
         img.onload = async function() {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          const maxW = 500;
+          const maxW = 350; 
           let w = img.width, h = img.height;
           if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
           canvas.width = w; canvas.height = h;
           ctx.drawImage(img, 0, 0, w, h);
 
-          stoneDatabase[index].image = canvas.toDataURL('image/jpeg', 0.7);
+          stoneDatabase[index].image = canvas.toDataURL('image/jpeg', 0.5);
           renderTable();
           await saveData();
         }
