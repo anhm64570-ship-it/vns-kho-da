@@ -153,7 +153,37 @@
       } catch (e) {
         console.error(e);
       }
-      renderView();
+      function renderView() {
+  const viewArea = document.getElementById('viewArea');
+  if (!currentId) {
+    viewArea.innerHTML = '<div style="color: #64748b; padding: 10px 0;">Hãy dùng Camera quét mã QR dán trên mẫu đá để xem thông tin tồn kho.</div>';
+    return;
+  }
+
+  // Chuyển cả 2 về dạng chuỗi và xóa khoảng trắng thừa để so sánh chuẩn tuyệt đối
+  const cleanSearchId = String(currentId).trim().toLowerCase();
+  const stone = stoneDatabase.find(s => String(s.id).trim().toLowerCase() === cleanSearchId);
+
+  if (!stone) {
+    viewArea.innerHTML = `<div style="color: #ef4444; font-weight: 800; padding: 15px 0;">❌ Chưa tìm thấy mã đá #${currentId}!</div>`;
+    return;
+  }
+
+  const imgHtml = stone.image 
+    ? `<div class="image-section">
+         <div class="image-title">📷 ẢNH MẪU THỰC TẾ</div>
+         <div class="image-box"><img src="${stone.image}"></div>
+       </div>`
+    : '';
+
+  viewArea.innerHTML = `
+    <div class="field"><div class="field-label">MÃ HÀNG / SẢN PHẨM</div><div class="field-value">${stone.name}</div></div>
+    <div class="field"><div class="field-label">XUẤT XỨ</div><div class="field-value">${stone.origin || 'N/A'}</div></div>
+    <div class="field highlight-green"><div class="field-label">SỐ M² TỒN KHO</div><div class="field-value">${Number(stone.stock || 0).toLocaleString('vi-VN')} m²</div></div>
+    <div class="field highlight-blue"><div class="field-label">ĐƠN GIÁ DỰ TÍNH</div><div class="field-value">${stone.price ? Number(stone.price).toLocaleString('vi-VN') + ' VNĐ' : 'Chưa có giá'}</div></div>
+    ${imgHtml}
+  `;
+};
       renderTable();
     }
 
