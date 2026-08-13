@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VNS+ HOME KHO</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Nhập dữ liệu kho từ file data.js -->
+  <script src="./data.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f4f9; margin: 0; padding: 20px 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    
+    .card { background: white; border-radius: 28px; padding: 32px 22px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); text-align: center; }
+    .badge { background: #e0e7ff; color: #3730a3; padding: 6px 18px; border-radius: 20px; font-weight: 800; font-size: 13px; display: inline-block; margin-bottom: 14px; letter-spacing: 0.5px; }
+    .title { font-size: 22px; font-weight: 900; color: #0f172a; margin-bottom: 24px; text-transform: uppercase; letter-spacing: -0.5px; }
+    
+    .field { background: #f8fafc; border-radius: 18px; padding: 16px 20px; margin-bottom: 14px; text-align: left; border: 1px solid #f1f5f9; }
+    .field-label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .field-value { font-size: 19px; font-weight: 800; color: #0f172a; word-break: break-word; }
+    
+    .highlight-green { background: #ecfdf5; border-color: #a7f3d0; }
+    .highlight-green .field-label { color: #059669; }
+    .highlight-green .field-value { color: #059669; font-size: 28px; }
+    
+    .highlight-blue { background: #f0f9ff; border-color: #bae6fd; }
+    .highlight-blue .field-label { color: #0284c7; }
+    .highlight-blue .field-value { color: #2563eb; font-size: 22px; }
+
+    .image-section { margin-top: 18px; text-align: left; }
+    .image-title { font-size: 12px; font-weight: 800; color: #64748b; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .image-box { border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .image-box img { width: 100%; height: auto; display: block; }
+
+    .btn { background: #2563eb; color: white; border: none; width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    .btn-purple { background: #7c3aed; }
+    .btn-green { background: #059669; }
+    .btn-outline { background: transparent; border: 2px solid #cbd5e1; color: #64748b; margin-top: 24px; font-size: 14px; }
+
+    .admin-section { width: 100%; max-width: 1000px; background: white; border-radius: 20px; padding: 25px; margin-top: 25px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; text-align: left; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    th { background: #f8fafc; font-weight: 700; color: #475569; }
+
+    .img-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 10px; }
+    .btn-action-group { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+    .btn-action { font-size: 11px; cursor: pointer; font-weight: bold; border-radius: 6px; padding: 4px 8px; border: none; }
+    .btn-change { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .btn-delete { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+      .qr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+      .qr-item { border: 1px dashed #ccc; padding: 12px; text-align: center; border-radius: 10px; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KHU VỰC KHÁCH QUÉT MÃ QR -->
+  <div class="card">
+    <span class="badge">VNS+ HOME KHO</span>
+    <div class="title">THÔNG TIN TỒN KHO</div>
+    <div id="viewArea">Đang tải dữ liệu...</div>
+    <button class="btn btn-outline" onclick="toggleAdmin()">⚙️ Quản Lý Kho & Xuất File Data</button>
+  </div>
+
+  <!-- KHU VỰC QUẢN LÝ -->
+  <div class="admin-section" id="adminSection">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0; color: #0f172a;">QUẢN LÝ KHO ĐÁ & ẢNH MẪU THỰC TẾ</h3>
+      <button class="btn" style="width: auto; padding: 8px 16px; background: #64748b; margin: 0;" onclick="toggleAdmin()">Đóng</button>
+    </div>
+
+    <!-- NÚT XUẤT DATA NẰM ĐÂY -->
+    <div style="background: #ecfdf5; padding: 16px; border-radius: 14px; margin-bottom: 20px; border: 1px solid #a7f3d0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <b style="color: #065f46; font-size: 15px;">💾 Bước quan trọng khi có thay đổi dữ liệu/ảnh:</b>
+        <div style="color: #047857; font-size: 12px; margin-top: 2px;">Bấm nút bên cạnh để tải file <b>data.js</b> về máy, sau đó tải/dán vào GitHub.</div>
+      </div>
+      <button class="btn btn-green" style="width: auto; padding: 12px 20px; margin: 0;" onclick="exportDataJS()">💾 TẢI FILE DATA.JS MỚI VỀ MÁY</button>
+    </div>
+
+    <div style="background: #f8fafc; padding: 16px; border-radius: 14px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; border: 1px solid #e2e8f0;">
+      <div style="flex: 1; min-width: 200px;">
+        <b>1. Tải File Excel lên:</b><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="margin-top: 8px;">
+      </div>
+      <div>
+        <b>2. In tem QR hàng loạt:</b><br>
+        <button class="btn btn-purple" style="width: auto; padding: 10px 18px; margin-top: 5px;" onclick="printQRCodes()">🖨️ IN DANH SÁCH MÃ QR MỚI</button>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Tên Vật Liệu (TOTAL)</th>
+            <th>Xuất Xứ</th>
+            <th>Tồn Kho (m²)</th>
+            <th>Đơn Giá</th>
+            <th>Ảnh Thực Tế</th>
+            <th>Mã QR Quét</th>
+          </tr>
+        </thead>
+        <tbody id="stoneTableBody">
+          <tr><td colspan="7" style="text-align: center;">Chưa có dữ liệu. Hãy tải file Excel lên hoặc khai báo data.js!</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="printArea"></div>
+
+  <script>
+    // Lấy dữ liệu từ file data.js đã import
+    let stoneDatabase = (typeof window.stoneData !== 'undefined') ? window.stoneData : [];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentId = urlParams.get('id');
+
+    window.onload = function() {
+      renderView();
+      renderTable();
+    };
+
+    function parseNumber(val) {
+      if (!val || String(val).includes('#N/A') || String(val).trim() === '-') return 0;
+      let clean = String(val).replace(/[^0-9.-]/g, '');
+      return parseFloat(clean) || 0;
+    }
+
+    function renderView() {
+      const viewArea = document.getElementById('viewArea');
+      if (!currentId) {
+        viewArea.innerHTML = '<div style="color: #64748b; padding: 10px 0;">Hãy dùng Camera quét mã QR dán trên mẫu đá để xem thông tin tồn kho.</div>';
+        return;
+      }
+
+      const stone = stoneDatabase.find(s => String(s.id).trim() === String(currentId).trim());
+
+      if (!stone) {
+        viewArea.innerHTML = `<div style="color: #ef4444; font-weight: 800; padding: 15px 0;">❌ Chưa tìm thấy mã đá #${currentId}!</div>`;
+        return;
+      }
+
+      const imgHtml = stone.image 
+        ? `<div class="image-section">
+             <div class="image-title">📷 ẢNH MẪU THỰC TẾ</div>
+             <div class="image-box"><img src="${stone.image}"></div>
+           </div>`
+        : '';
+
+      viewArea.innerHTML = `
+        <div class="field"><div class="field-label">MÃ HÀNG / SẢN PHẨM</div><div class="field-value">${stone.name}</div></div>
+        <div class="field"><div class="field-label">XUẤT XỨ</div><div class="field-value">${stone.origin || 'N/A'}</div></div>
+        <div class="field highlight-green"><div class="field-label">SỐ M² TỒN KHO</div><div class="field-value">${Number(stone.stock || 0).toLocaleString('vi-VN')} m²</div></div>
+        <div class="field highlight-blue"><div class="field-label">ĐƠN GIÁ DỰ TÍNH</div><div class="field-value">${stone.price ? Number(stone.price).toLocaleString('vi-VN') + ' VNĐ' : 'Chưa có giá'}</div></div>
+        ${imgHtml}
+      `;
+    }
+
+    function toggleAdmin() {
+      const admin = document.getElementById('adminSection');
+      admin.style.display = admin.style.display === 'block' ? 'none' : 'block';
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+
+        const newStones = [];
+        let count = 0;
+        let lastOrigin = '';
+        let lastPrice = 0;
+
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          if (!row || !row[0]) continue;
+
+          if (row[1] && String(row[1]).trim() !== 'Xuất xứ') {
+            lastOrigin = String(row[1]).trim();
+          }
+
+          let currentPrice = parseNumber(row[5]);
+          if (currentPrice > 0) lastPrice = currentPrice;
+
+          const cellValue = String(row[0]).trim();
+
+          if (cellValue.toLowerCase().includes('total')) {
+            count++;
+            const cleanName = cellValue.replace(/total/gi, '').trim();
+            const existing = stoneDatabase.find(s => s && s.name === cleanName);
+
+            newStones.push({
+              id: count,
+              name: cleanName,
+              origin: (row[1] && String(row[1]).trim() !== 'Xuất xứ') ? String(row[1]).trim() : lastOrigin,
+              stock: parseNumber(row[4]),
+              price: parseNumber(row[5]) || lastPrice,
+              image: existing ? existing.image : ''
+            });
+          }
+        }
+
+        stoneDatabase = newStones;
+        renderTable();
+        alert("Đã nhận dữ liệu Excel! Hãy bấm nút 'TẢI FILE DATA.JS MỚI VỀ MÁY' màu xanh ở trên để tải file về rồi up lên GitHub nhé.");
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function uploadStoneImage(index, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const maxW = 500;
+          let w = img.width, h = img.height;
+          if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+          canvas.width = w; canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+
+          stoneDatabase[index].image = canvas.toDataURL('image/jpeg', 0.7);
+          renderTable();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function deleteStoneImage(index) {
+      stoneDatabase[index].image = '';
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('stoneTableBody');
+      tbody.innerHTML = '';
+
+      if (stoneDatabase.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Chưa có dữ liệu. Hãy tải file Excel lên!</td></tr>';
+        return;
+      }
+
+      const baseUrl = window.location.href.split('?')[0];
+
+      stoneDatabase.forEach((stone, index) => {
+        if (!stone) return;
+        const tr = document.createElement('tr');
+
+        const imgHtml = stone.image 
+          ? `<div style="text-align:center;">
+               <img src="${stone.image}" class="img-preview"><br>
+               <div class="btn-action-group">
+                 <label class="btn-action btn-change"><input type="file" accept="image/*" style="display:none;" onchange="uploadStoneImage(${index}, this)">Đổi</label>
+                 <button class="btn-action btn-delete" onclick="deleteStoneImage(${index})">Xoá</button>
+               </div>
+             </div>`
+          : `<div style="text-align:center;">
+               <label class="btn-action btn-change" style="padding:6px 12px; display:inline-block;"><input type="file" accept="image/*" style="display:none;" onchange="uploadStoneImage(${index}, this)">📷 Tải ảnh</label>
+             </div>`;
+
+        tr.innerHTML = `
+          <td><b>#${stone.id}</b></td>
+          <td><b>${stone.name}</b></td>
+          <td>${stone.origin || '-'}</td>
+          <td><b style="color:#059669;">${Number(stone.stock).toLocaleString('vi-VN')} m²</b></td>
+          <td><b style="color:#2563eb;">${stone.price ? Number(stone.price).toLocaleString('vi-VN') + ' đ' : 'Chưa có giá'}</b></td>
+          <td>${imgHtml}</td>
+          <td><div id="qr-${index}"></div></td>
+        `;
+        tbody.appendChild(tr);
+
+        setTimeout(() => {
+          const qrDiv = document.getElementById(`qr-${index}`);
+          if (qrDiv) {
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+              text: `${baseUrl}?id=${stone.id}`,
+              width: 55,
+              height: 55,
+              correctLevel: QRCode.CorrectLevel.L
+            });
+          }
+        }, 100);
+      });
+    }
+
+    // HÀM XUẤT FILE DATA.JS
+    function exportDataJS() {
+      if (stoneDatabase.length === 0) {
+        alert("Chưa có dữ liệu kho để xuất file!");
+        return;
+      }
+      const dataStr = "window.stoneData = " + JSON.stringify(stoneDatabase, null, 2) + ";";
+      const blob = new Blob([dataStr], { type: "text/javascript" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'data.js';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function printQRCodes() {
+      if (stoneDatabase.length === 0) { alert("Chưa có dữ liệu!"); return; }
+
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = '<h2 style="text-align:center;">DANH SÁCH MÃ QR MỚI</h2><div class="qr-grid" id="qrGrid"></div>';
+      const grid = document.getElementById('qrGrid');
+      const baseUrl = window.location.href.split('?')[0];
+
+      stoneDatabase.forEach((stone, index) => {
+        if (!stone) return;
+        const item = document.createElement('div');
+        item.className = 'qr-item';
+        item.innerHTML = `
+          <div style="font-size: 11px; font-weight: bold; color:#64748b;">STT: ${stone.id}</div>
+          <div style="font-size: 13px; font-weight: bold; margin: 4px 0; color:#0f172a;">${stone.name}</div>
+          <div id="print-qr-${index}" style="display: flex; justify-content: center; margin-top: 6px;"></div>
+        `;
+        grid.appendChild(item);
+
+        new QRCode(document.getElementById(`print-qr-${index}`), {
+          text: `${baseUrl}?id=${stone.id}`,
+          width: 110,
+          height: 110,
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      });
+
+      setTimeout(() => { window.print(); }, 500);
+    }
+  </script>
+</body>
+</html>
