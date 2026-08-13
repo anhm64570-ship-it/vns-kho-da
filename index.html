@@ -5,7 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VNS+ HOME KHO</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">// CẤU HÌNH LINK CỐ ĐỊNH CHUẨN HTTPS
+const baseUrl = "https://anhm64570-ship-it.github.io/vns-kho-da/";
+
+function renderTable() {
+  const tbody = document.getElementById('stoneTableBody');
+  tbody.innerHTML = '';
+
+  if (stoneDatabase.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Chưa có dữ liệu. Hãy tải file Excel lên!</td></tr>';
+    return;
+  }
+
+  stoneDatabase.forEach((stone, index) => {
+    if (!stone) return;
+    const tr = document.createElement('tr');
+
+    const imgHtml = stone.image 
+      ? `<div style="text-align:center;">
+           <img src="${stone.image}" class="img-preview"><br>
+           <div class="btn-action-group">
+             <label class="btn-action btn-change"><input type="file" accept="image/*" style="display:none;" onchange="uploadStoneImage(${index}, this)">Đổi</label>
+             <button class="btn-action btn-delete" onclick="deleteStoneImage(${index})">Xoá</button>
+           </div>
+         </div>`
+      : `<div style="text-align:center;">
+           <label class="btn-action btn-change" style="padding:6px 12px; display:inline-block;"><input type="file" accept="image/*" style="display:none;" onchange="uploadStoneImage(${index}, this)">📷 Tải ảnh</label>
+         </div>`;
+
+    tr.innerHTML = `
+      <td><b>#${stone.id}</b></td>
+      <td><b>${stone.name}</b></td>
+      <td>${stone.origin || '-'}</td>
+      <td><b style="color:#059669;">${Number(stone.stock).toLocaleString('vi-VN')} m²</b></td>
+      <td><b style="color:#2563eb;">${stone.price ? Number(stone.price).toLocaleString('vi-VN') + ' đ' : 'Chưa có giá'}</b></td>
+      <td>${imgHtml}</td>
+      <td><div id="qr-${index}"></div></td>
+    `;
+    tbody.appendChild(tr);
+
+    setTimeout(() => {
+      const qrDiv = document.getElementById(`qr-${index}`);
+      if (qrDiv) {
+        qrDiv.innerHTML = '';
+        new QRCode(qrDiv, {
+          text: `${baseUrl}?id=${stone.id}`,
+          width: 80,
+          height: 80,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+    }, 100);
+  });
+}
+
+function printQRCodes() {
+  if (stoneDatabase.length === 0) { alert("Chưa có dữ liệu!"); return; }
+
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = '<h2 style="text-align:center;">DANH SÁCH MÃ QR MỚI</h2><div class="qr-grid" id="qrGrid"></div>';
+  const grid = document.getElementById('qrGrid');
+
+  stoneDatabase.forEach((stone, index) => {
+    if (!stone) return;
+    const item = document.createElement('div');
+    item.className = 'qr-item';
+    item.innerHTML = `
+      <div style="font-size: 11px; font-weight: bold; color:#64748b;">STT: ${stone.id}</div>
+      <div style="font-size: 13px; font-weight: bold; margin: 4px 0; color:#0f172a;">${stone.name}</div>
+      <div id="print-qr-${index}" style="display: flex; justify-content: center; margin-top: 6px;"></div>
+    `;
+    grid.appendChild(item);
+
+    new QRCode(document.getElementById(`print-qr-${index}`), {
+      text: `${baseUrl}?id=${stone.id}`,
+      width: 150,
+      height: 150,
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+
+  setTimeout(() => { window.print(); }, 500);
+}
 
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
